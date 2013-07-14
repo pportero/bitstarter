@@ -1,3 +1,3 @@
-node-js-sample
+Bitstarter
 ==============
-Just a sample repo to practice with GitHub and Heroku
+Repository for the BitStarter project from Stanford Startup Development class

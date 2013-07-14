@@ -22,9 +22,12 @@ References:
 */
 
 var fs = require('fs');
+var util = require('util');
 var program = require('commander');
 var cheerio = require('cheerio');
+var rest = require('restler');
 var HTMLFILE_DEFAULT = "index.html";
+var HTMLURL_DEFAULT = "http://protected-headland-1050.herokuapp.com";
 var CHECKSFILE_DEFAULT = "checks.json";
 
 var assertFileExists = function(infile) {
@@ -36,6 +39,36 @@ var assertFileExists = function(infile) {
     return instr;
 };
 
+
+
+var loadHtmlUrl = function(url, file) {
+//        console.log('loadHtmlUrl(' + url +', ' + file +') called!\n');
+	var resultstr = rest.get(url).on('complete', function(result) {
+	   write2file(result, file);
+	});
+};
+
+var write2file = function(result, file) {
+//    console.log('write2file(' + result +', ' + file +') called!\n');
+        if (result instanceof Error) {
+            console.log('Error: ' + util.format(result.message));
+        } else {
+            fs.writeFile(file, result, function(err) {
+                if (err) throw err;
+    //            console.log('File: ' + file + ' is saved');
+            });
+        }
+    assertFileExists(file);
+}
+
+var downloadUrl  = function(url) {
+//    console.log('downloadUrl(' + url + ') called!\n');      
+    var outFile = __dirname + '/tempFile.html';
+    program.file = outFile;
+    loadHtmlUrl(url, outFile);
+}
+
+
 var cheerioHtmlFile = function(htmlfile) {
     return cheerio.load(fs.readFileSync(htmlfile));
 };
@@ -45,6 +78,7 @@ var loadChecks = function(checksfile) {
 };
 
 var checkHtmlFile = function(htmlfile, checksfile) {
+  //  console.log('htmlFile: ' + htmlfile + '\n');
     $ = cheerioHtmlFile(htmlfile);
     var checks = loadChecks(checksfile).sort();
     var out = {};
@@ -65,10 +99,16 @@ if(require.main == module) {
     program
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
+        .option('-u, --url <url>', 'URL to check', clone(downloadUrl), HTMLURL_DEFAULT)
         .parse(process.argv);
-    var checkJson = checkHtmlFile(program.file, program.checks);
-    var outJson = JSON.stringify(checkJson, null, 4);
-    console.log(outJson);
+    var checkJson;
+    setTimeout((function() {
+       checkJson = checkHtmlFile(program.file, program.checks);
+       var outJson = JSON.stringify(checkJson, null, 4);
+       console.log(outJson);
+    }), 2000);
+
+ //   var checkJson = checkHtmlFile(program.file, program.checks);
 } else {
     exports.checkHtmlFile = checkHtmlFile;
 }
